@@ -1,4 +1,3 @@
-
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -57,7 +56,7 @@
         <section class="metrics-grid">
             <article class="metric-card">
                 <div class="metric-heading">TOTAL EXPERIMENTS <span>↗</span></div>
-                <div class="metric-value" id="total-tests">12</div>
+                <div class="metric-value" id="total-tests">0</div>
                 <p class="metric-foot">Recorded lab sessions</p>
             </article>
             <article class="metric-card">
@@ -118,10 +117,9 @@
 
                 <label for="material-select">Material under test</label>
                 <select id="material-select">
-                    <option value="Aluminum">Aluminum</option>
-                    <option value="Steel">Steel</option>
-                    <option value="Copper">Copper</option>
-                    <option value="Acrylic">Acrylic</option>
+                    {% for m in materials %}
+                    <option value="{{ m.name }}">{{ m.name }}</option>
+                    {% endfor %}
                     <option value="Unknown">Unknown material</option>
                 </select>
 

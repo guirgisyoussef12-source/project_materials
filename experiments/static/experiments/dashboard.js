@@ -1,4 +1,3 @@
-
 const $ = (id) => document.getElementById(id);
 
 let chart;
@@ -7,6 +6,7 @@ let running = false;
 let elapsed = 0;
 let readings = [];
 let history = [];
+let totalTests = 0;
 let startTime = 0;
 let nextSampleTime = 0;
 let sampleRate = 100;
@@ -79,7 +79,7 @@ function configureSimulation() {
         Unknown: { damping: 0.32, frequency: 4.0 }
     };
 
-    const selected = parameters[material];
+    const selected = parameters[material] || parameters.Unknown;
     damping = selected.damping;
     frequency = selected.frequency;
     duration = Number($("duration-select").value);
@@ -311,27 +311,77 @@ function finishTest(status = "Completed") {
     saveHistory(metrics);
 }
 
-function saveHistory(metrics) {
+function getCsrfToken() {
+    const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : "";
+}
+
+async function saveHistory(metrics) {
     const peak = readings.length
         ? Math.max(...readings.map(r => Math.abs(r.value)))
         : 0;
 
-    const prediction = $("predicted-material").textContent;
-    const row = {
-        id: `VT-${String(history.length + 1).padStart(3, "0")}`,
-        material: $("material-select").value,
-        duration: elapsed.toFixed(2),
-        peak: peak.toFixed(2),
-        decay: metrics ? metrics.decayRate.toFixed(3) : "N/A",
-        result: prediction
+    const material = $("material-select").value;
+    const predicted = $("predicted-material").textContent;
+    const confidence = parseFloat($("confidence-value").textContent);
+
+    const payload = {
+        material: material === "Unknown" ? null : material,
+        source: "simulation",
+        duration: Number(elapsed.toFixed(3)),
+        sample_rate: sampleRate,
+        readings: readings.map(r => [Number(r.time.toFixed(4)), Number(r.value.toFixed(5))]),
+        metrics: {
+            peak,
+            decay_rate: metrics ? metrics.decayRate : null,
+            damping_ratio: metrics ? metrics.zeta : null,
+            settling_time: metrics ? metrics.settlingTime : null
+        },
+        predicted_material: predicted,
+        confidence: Number.isFinite(confidence) ? confidence : null
     };
 
-    history.unshift(row);
-    renderHistory();
+    try {
+        const response = await fetch("/api/experiments/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCsrfToken()
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        await loadHistory();
+    } catch (error) {
+        console.error("Could not save experiment:", error);
+        alert("The experiment could not be saved to the database.");
+    }
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch("/api/experiments/");
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        const data = await response.json();
+        history = data.experiments.map(e => ({
+            id: e.id,
+            material: e.material,
+            duration: Number(e.duration).toFixed(2),
+            peak: e.peak == null ? "N/A" : Number(e.peak).toFixed(2),
+            decay: e.decay == null ? "N/A" : Number(e.decay).toFixed(3),
+            result: e.result
+        }));
+        totalTests = data.total;
+        renderHistory();
+    } catch (error) {
+        console.error("Could not load history:", error);
+    }
 }
 
 function renderHistory() {
-    $("total-tests").textContent = 12 + history.length;
+    $("total-tests").textContent = totalTests;
+
+    if (!history.length) return;
 
     const body = $("history-body");
     body.replaceChildren();
@@ -434,6 +484,8 @@ document.addEventListener("DOMContentLoaded", () => {
     $("current-date").textContent = new Date().toLocaleDateString(
         "en-GB", { day: "2-digit", month: "short", year: "numeric" }
     ).toUpperCase();
+
+    loadHistory();
 
     $("start-btn").addEventListener("click", startTest);
     $("stop-btn").addEventListener("click", () => finishTest("Stopped"));
