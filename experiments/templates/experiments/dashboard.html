@@ -1,0 +1,244 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibraLab | Material Analysis</title>
+    <link rel="stylesheet" href="{% static 'experiments/dashboard.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'experiments/dashboard.js' %}" defer></script>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" href="#">
+            <span class="brand-icon">V</span>
+            <span>Vibra<span class="accent">Lab</span><small>MATERIAL INTELLIGENCE</small></span>
+        </a>
+
+        <p class="nav-label">WORKSPACE</p>
+        <a class="nav-link active" href="#overview">▦ &nbsp; Dashboard</a>
+        <a class="nav-link" href="#live-test">⌁ &nbsp; Live testing</a>
+        <a class="nav-link" href="#analysis">◈ &nbsp; Material analysis</a>
+        <a class="nav-link" href="#history">▤ &nbsp; Experiment history</a>
+
+        <div class="sidebar-bottom">
+            <div class="sensor-status">
+                <span class="status-dot"></span>
+                <div><strong>Simulation mode</strong><small>Hardware not connected</small></div>
+            </div>
+            <p class="sidebar-note">SMART VIBRATION<br>DAMPING TESTER</p>
+        </div>
+    </aside>
+
+    <main class="main-content" id="overview">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">ENGINEERING WORKSPACE / OVERVIEW</p>
+                <h1>Vibration Analysis</h1>
+                <p class="subtitle">Measure, analyze and compare material damping behavior.</p>
+            </div>
+            <div class="topbar-right">
+                <span class="mode-pill"><span class="status-dot"></span> SIMULATION</span>
+                <div class="avatar">GL</div>
+            </div>
+        </header>
+
+        <section class="welcome-row">
+            <div>
+                <h2>Material testing workspace</h2>
+                <p>Run a vibration test and inspect the response over time.</p>
+            </div>
+            <span class="date-label" id="current-date">LAB SESSION</span>
+        </section>
+
+        <section class="metrics-grid">
+            <article class="metric-card">
+                <div class="metric-heading">TOTAL EXPERIMENTS <span>↗</span></div>
+                <div class="metric-value" id="total-tests">12</div>
+                <p class="metric-foot">Recorded lab sessions</p>
+            </article>
+            <article class="metric-card">
+                <div class="metric-heading">LAST PEAK AMPLITUDE <span>⌁</span></div>
+                <div class="metric-value"><span id="peak-value">0.00</span><small> m/s²</small></div>
+                <p class="metric-foot">Maximum measured acceleration</p>
+            </article>
+            <article class="metric-card">
+                <div class="metric-heading">DECAY RATE <span>↘</span></div>
+                <div class="metric-value"><span id="decay-value">—</span><small> s⁻¹</small></div>
+                <p class="metric-foot">Estimated from the signal envelope</p>
+            </article>
+            <article class="metric-card">
+                <div class="metric-heading">TEST STATUS <span>●</span></div>
+                <div class="metric-value status-value" id="test-status">Ready</div>
+                <p class="metric-foot" id="status-detail">Waiting for a test</p>
+            </article>
+        </section>
+
+        <section class="content-grid" id="live-test">
+            <article class="panel chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">REAL-TIME MONITOR</p>
+                        <h3>Vibration response</h3>
+                        <p class="panel-description">Acceleration amplitude against elapsed time</p>
+                    </div>
+                    <span class="live-badge" id="chart-badge">● READY</span>
+                </div>
+
+                <div class="chart-legend">
+                    <span><i class="legend-line"></i> Vibration signal</span>
+                    <span class="unit-label">m/s²</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="vibration-chart" aria-label="Vibration amplitude versus time chart"></canvas>
+                    <div class="chart-empty" id="chart-empty">
+                        <span class="empty-icon">⌁</span>
+                        <strong>Ready to measure</strong>
+                        <p>Start a test to generate a sample vibration signal.</p>
+                    </div>
+                </div>
+
+                <div class="chart-footer">
+                    <span>TIME ELAPSED <strong id="elapsed-time">0.00 s</strong></span>
+                    <span>DATA POINTS <strong id="data-points">0</strong></span>
+                </div>
+            </article>
+
+            <article class="panel controls-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">EXPERIMENT SETUP</p>
+                        <h3>Test controls</h3>
+                    </div>
+                    <span class="setup-icon">⚙</span>
+                </div>
+
+                <label for="material-select">Material under test</label>
+                <select id="material-select">
+                    <option value="Aluminum">Aluminum</option>
+                    <option value="Steel">Steel</option>
+                    <option value="Copper">Copper</option>
+                    <option value="Acrylic">Acrylic</option>
+                    <option value="Unknown">Unknown material</option>
+                </select>
+
+                <label for="duration-select">Test duration</label>
+                <select id="duration-select">
+                    <option value="5">5 seconds</option>
+                    <option value="10" selected>10 seconds</option>
+                    <option value="15">15 seconds</option>
+                </select>
+
+                <label for="sample-select">Sampling rate</label>
+                <select id="sample-select">
+                    <option value="50">50 Hz</option>
+                    <option value="100" selected>100 Hz</option>
+                    <option value="200">200 Hz</option>
+                </select>
+
+                <div class="control-divider"></div>
+                <div class="control-actions">
+                    <button class="btn-primary" id="start-btn">▶ &nbsp; Start test</button>
+                    <button class="btn-secondary" id="stop-btn" disabled>■ &nbsp; Stop</button>
+                    <button class="btn-reset" id="reset-btn" title="Reset current test">↻</button>
+                </div>
+                <p class="demo-notice">Demo mode: readings are simulated, not from physical hardware.</p>
+            </article>
+        </section>
+
+        <section class="content-grid analysis-grid" id="analysis">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">SIGNAL PROCESSING</p>
+                        <h3>Damping analysis</h3>
+                    </div>
+                    <span class="neutral-pill">ESTIMATED</span>
+                </div>
+                <div class="analysis-metrics">
+                    <div class="analysis-item">
+                        <span>Damping ratio</span>
+                        <strong id="damping-ratio">—</strong>
+                        <small>Dimensionless</small>
+                    </div>
+                    <div class="analysis-item">
+                        <span>Decay rate</span>
+                        <strong id="analysis-decay">—</strong>
+                        <small>Per second</small>
+                    </div>
+                    <div class="analysis-item">
+                        <span>Settling time</span>
+                        <strong id="settling-time">—</strong>
+                        <small>Seconds</small>
+                    </div>
+                </div>
+                <div class="interpretation" id="interpretation">
+                    <span class="interpretation-icon">ⓘ</span>
+                    <p>Run a test to calculate preliminary damping metrics from the simulated signal.</p>
+                </div>
+            </article>
+
+            <article class="panel prediction-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">MATERIAL CLASSIFICATION</p>
+                        <h3>Prediction result</h3>
+                    </div>
+                    <span class="neutral-pill">DEMO</span>
+                </div>
+                <div class="prediction-result">
+                    <div class="prediction-symbol">◈</div>
+                    <div>
+                        <p class="prediction-label">PREDICTED MATERIAL</p>
+                        <h2 id="predicted-material">Not available</h2>
+                        <p id="prediction-description">Complete a test to view the demo result.</p>
+                    </div>
+                </div>
+                <div class="confidence-row">
+                    <span>Demo similarity score</span>
+                    <strong id="confidence-value">—</strong>
+                </div>
+                <div class="confidence-track"><div id="confidence-bar"></div></div>
+                <p class="prediction-disclaimer">Illustrative only. This is not a trained model or a validated material identification.</p>
+            </article>
+        </section>
+
+        <section class="panel history-panel" id="history">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">LAB RECORDS</p>
+                    <h3>Experiment history</h3>
+                    <p class="panel-description">Results generated during this dashboard session.</p>
+                </div>
+                <button class="btn-secondary export-btn" id="export-btn">↓ &nbsp; Export CSV</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>TEST ID</th>
+                            <th>MATERIAL</th>
+                            <th>DURATION</th>
+                            <th>PEAK AMPLITUDE</th>
+                            <th>DECAY RATE</th>
+                            <th>RESULT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr class="empty-row"><td colspan="6">No tests run in this session yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <span>VIBRALAB <span class="accent">/</span> SMART MATERIALS PROJECT</span>
+            <span>Prototype interface · Simulation data only</span>
+        </footer>
+    </main>
+</div>
+</body>
+</html>
