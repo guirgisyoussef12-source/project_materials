@@ -18,6 +18,7 @@ def _num(value):
 
 
 def serialize_experiment(exp):
+    """Convert one Experiment into a dict that can be sent as JSON."""
     result = getattr(exp, "result", None)
     return {
         "id": exp.code,
@@ -34,8 +35,9 @@ def serialize_experiment(exp):
     }
 
 
-@ensure_csrf_cookie
+@ensure_csrf_cookie  # sends the CSRF cookie the JavaScript needs for POST
 def dashboard(request):
+    """Show the dashboard page."""
     return render(request, "experiments/dashboard.html", {
         "materials": Material.objects.all(),
     })
@@ -43,6 +45,7 @@ def dashboard(request):
 
 @require_http_methods(["GET", "POST"])
 def experiments_api(request):
+    """GET: list saved experiments. POST: save a new one."""
     if request.method == "GET":
         qs = (Experiment.objects
               .select_related("material", "result__predicted_material")[:50])
@@ -51,6 +54,7 @@ def experiments_api(request):
             "experiments": [serialize_experiment(e) for e in qs],
         })
 
+    # POST: check the data sent by the browser
     try:
         data = json.loads(request.body)
         duration = float(data["duration"])
@@ -74,6 +78,7 @@ def experiments_api(request):
     if data.get("predicted_material"):
         predicted = Material.objects.filter(name=data["predicted_material"]).first()
 
+    # Save the experiment, then its result
     exp = Experiment.objects.create(
         material=material, source=source, duration=duration,
         sample_rate=sample_rate, readings=readings,

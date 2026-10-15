@@ -1,3 +1,4 @@
+// Shortcut: $("id") returns the HTML element with that id.
 const $ = (id) => document.getElementById(id);
 
 let chart;
@@ -16,6 +17,7 @@ let frequency = 5;
 let initialAmplitude = 4;
 let noiseLevel = 0.035;
 
+// Create the empty chart (Chart.js).
 function initializeChart() {
     const ctx = $("vibration-chart").getContext("2d");
 
@@ -58,6 +60,7 @@ function initializeChart() {
     });
 }
 
+// Update the status card and the badge above the chart.
 function setStatus(status, detail) {
     $("test-status").textContent = status;
     $("status-detail").textContent = detail;
@@ -67,6 +70,7 @@ function setStatus(status, detail) {
         status === "Stopped" ? "● STOPPED" : "● READY";
 }
 
+// Read the selected options and set the simulated signal (decay, frequency).
 function configureSimulation() {
     const material = $("material-select").value;
 
@@ -88,6 +92,7 @@ function configureSimulation() {
     noiseLevel = 0.035;
 }
 
+// Start button: reset the screen and start generating readings.
 function startTest() {
     if (running) return;
 
@@ -132,6 +137,7 @@ function startTest() {
     timer = setInterval(generateSample, 1000 / Math.min(sampleRate, 50));
 }
 
+// Called by the timer: create simulated readings and draw them.
 function generateSample() {
     if (!running) return;
 
@@ -179,6 +185,7 @@ function generateSample() {
         : "0.00";
 }
 
+// Calculate decay rate, damping ratio and settling time from the readings.
 function analyzeSignal() {
     if (readings.length < 10) return null;
 
@@ -213,11 +220,13 @@ function analyzeSignal() {
         (sum, x) => sum + (x - meanX) ** 2, 0
     );
 
+    // Slope of the line fitted to log(peak) vs time; flip the sign.
     const decayRate = denominator ? -numerator / denominator : NaN;
 
     if (!Number.isFinite(decayRate) || decayRate <= 0) return null;
 
     // This is an estimate for the idealized underdamped oscillator model.
+    // NOTE: uses the simulation's frequency, not one measured from the signal.
     const omega = 2 * Math.PI * frequency;
     const zeta = decayRate / Math.sqrt(omega ** 2 + decayRate ** 2);
     const settlingTime = 4 / decayRate;
@@ -225,6 +234,7 @@ function analyzeSignal() {
     return { decayRate, zeta, settlingTime };
 }
 
+// Demo only: compares with made-up values, so it is not a real prediction.
 function predictDemoMaterial(metrics) {
     if (!metrics) {
         return {
@@ -261,6 +271,7 @@ function predictDemoMaterial(metrics) {
     };
 }
 
+// End the test, show the results and save the experiment.
 function finishTest(status = "Completed") {
     if (!running) return;
 
@@ -311,11 +322,13 @@ function finishTest(status = "Completed") {
     saveHistory(metrics);
 }
 
+// Read Django's CSRF token from the cookie (needed for POST).
 function getCsrfToken() {
     const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : "";
 }
 
+// Send the experiment to the server to be saved.
 async function saveHistory(metrics) {
     const peak = readings.length
         ? Math.max(...readings.map(r => Math.abs(r.value)))
@@ -358,6 +371,7 @@ async function saveHistory(metrics) {
     }
 }
 
+// Get the saved experiments from the server and show them.
 async function loadHistory() {
     try {
         const response = await fetch("/api/experiments/");
@@ -378,6 +392,7 @@ async function loadHistory() {
     }
 }
 
+// Draw the history table.
 function renderHistory() {
     $("total-tests").textContent = totalTests;
 
@@ -410,6 +425,7 @@ function renderHistory() {
     });
 }
 
+// Reset button: clear the chart and the numbers.
 function resetTest() {
     running = false;
     clearInterval(timer);
@@ -445,6 +461,7 @@ function resetTest() {
     setStatus("Ready", "Waiting for a test");
 }
 
+// Export button: download the history as a CSV file.
 function exportCSV() {
     if (!history.length) {
         alert("Run at least one test before exporting.");
@@ -454,6 +471,7 @@ function exportCSV() {
     const columns = ["Test ID", "Material", "Duration (s)",
         "Peak Amplitude (m/s²)", "Decay Rate (1/s)", "Prediction"];
 
+    // Wrap in quotes so commas inside the text do not break the CSV.
     const escapeCSV = value =>
         `"${String(value).replace(/"/g, '""')}"`;
 
@@ -478,6 +496,7 @@ function exportCSV() {
     URL.revokeObjectURL(url);
 }
 
+// When the page loads: create the chart and connect the buttons.
 document.addEventListener("DOMContentLoaded", () => {
     initializeChart();
 
